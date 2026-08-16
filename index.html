@@ -165,14 +165,17 @@
 
     <!-- Main Schedule Table View (手機雙向凍結：姓名凍結 + 日期表頭凍結) -->
     <div class="table-container card">
-      <div class="table-actions">
+      <div class="table-actions" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <h3 id="currentStoreTitle">DREAM PLAZA (DP) - 2026年 8月 排班表</h3>
-        <div class="legend">
-          <span class="legend-item"><span class="color-dot dot-morning"></span> 早班</span>
-          <span class="legend-item"><span class="color-dot dot-night"></span> 晚班</span>
-          <span class="legend-item"><span class="color-dot dot-all"></span> 全班</span>
-          <span class="legend-item"><span class="color-dot dot-off"></span> 休假</span>
-          <span class="legend-item"><span class="color-dot dot-leave"></span> 請假</span>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <button id="btnClearStoreSchedule" class="btn btn-outline btn-touch" style="color:#b91c1c; border-color:#fca5a5; font-size:0.8rem;">🧹 一鍵清空本月班表</button>
+          <div class="legend">
+            <span class="legend-item"><span class="color-dot dot-morning"></span> 早班</span>
+            <span class="legend-item"><span class="color-dot dot-night"></span> 晚班</span>
+            <span class="legend-item"><span class="color-dot dot-all"></span> 全班</span>
+            <span class="legend-item"><span class="color-dot dot-off"></span> 休假</span>
+            <span class="legend-item"><span class="color-dot dot-leave"></span> 請假</span>
+          </div>
         </div>
       </div>
 
@@ -429,7 +432,7 @@
     </footer>
   </div>
 
-  <script src="shift-data.js?v=2026081608"></script>
-  <script src="app.js?v=2026081608"></script>
+  <script src="shift-data.js?v=2026081609"></script>
+  <script src="app.js?v=2026081609"></script>
 </body>
 </html>

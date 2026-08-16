@@ -1164,6 +1164,34 @@
       });
     }
 
+    const btnClearStoreSchedule = document.getElementById("btnClearStoreSchedule");
+    if (btnClearStoreSchedule) {
+      btnClearStoreSchedule.addEventListener("click", () => {
+        const storeNames = {
+          DP: "DREAM PLAZA (DP)",
+          TAINAN: "台南三越",
+          DREAM: "夢時代",
+          SKM: "SKM PARK"
+        };
+        const storeLabel = storeNames[currentStore] || currentStore;
+        if (confirm(`確定要清空【${storeLabel}】在 ${currentYearMonth} 的所有排班紀錄嗎？\n（此動作將清空該門市所有人員的本月班表並同步雲端）`)) {
+          const storeEmployees = employees.filter(e => e.store === currentStore);
+          const days = getDaysInMonth(currentYearMonth);
+          
+          storeEmployees.forEach(emp => {
+            days.forEach(d => {
+              const key = `${currentStore}_${emp.code}_${d.day}`;
+              delete scheduleData[key];
+            });
+          });
+
+          syncScheduleToCloud();
+          renderScheduleTable();
+          alert(`已成功清空【${storeLabel}】${currentYearMonth} 的所有班表！`);
+        }
+      });
+    }
+
     if (btnAiAutoSchedule) btnAiAutoSchedule.addEventListener("click", runAiAutoSchedule);
     if (btnExportHr) btnExportHr.addEventListener("click", exportHrImportExcel);
     if (btnExportStore) btnExportStore.addEventListener("click", exportStoreReportExcel);
