@@ -34,6 +34,7 @@
           <button id="btnManageShifts" class="btn btn-secondary btn-touch">⏰ 班別字典</button>
           <button id="btnAiAutoSchedule" class="btn btn-ai btn-touch">✨ AI 一鍵排班</button>
           <button id="btnExportStore" class="btn btn-primary btn-touch">📊 匯出時數統計</button>
+          <button id="btnClearStoreSchedule" class="btn btn-outline btn-touch" style="color:#b91c1c; border-color:#fca5a5;">🧹 一鍵清空班表</button>
           <button id="btnResetData" class="btn btn-danger btn-touch" style="font-size:0.78rem;">🔄 重設名單</button>
           <button id="btnLogout" class="btn btn-secondary btn-touch" style="color:var(--danger); border-color:#fca5a5;">🚪 登出 (<span id="loggedUserBadge">DALAB</span>)</button>
         </div>
@@ -165,17 +166,14 @@
 
     <!-- Main Schedule Table View (手機雙向凍結：姓名凍結 + 日期表頭凍結) -->
     <div class="table-container card">
-      <div class="table-actions" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div class="table-actions">
         <h3 id="currentStoreTitle">DREAM PLAZA (DP) - 2026年 8月 排班表</h3>
-        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-          <button id="btnClearStoreSchedule" class="btn btn-outline btn-touch" style="color:#b91c1c; border-color:#fca5a5; font-size:0.8rem;">🧹 一鍵清空本月班表</button>
-          <div class="legend">
-            <span class="legend-item"><span class="color-dot dot-morning"></span> 早班</span>
-            <span class="legend-item"><span class="color-dot dot-night"></span> 晚班</span>
-            <span class="legend-item"><span class="color-dot dot-all"></span> 全班</span>
-            <span class="legend-item"><span class="color-dot dot-off"></span> 休假</span>
-            <span class="legend-item"><span class="color-dot dot-leave"></span> 請假</span>
-          </div>
+        <div class="legend">
+          <span class="legend-item"><span class="color-dot dot-morning"></span> 早班</span>
+          <span class="legend-item"><span class="color-dot dot-night"></span> 晚班</span>
+          <span class="legend-item"><span class="color-dot dot-all"></span> 全班</span>
+          <span class="legend-item"><span class="color-dot dot-off"></span> 休假</span>
+          <span class="legend-item"><span class="color-dot dot-leave"></span> 請假</span>
         </div>
       </div>
 
@@ -432,7 +430,7 @@
     </footer>
   </div>
 
-  <script src="shift-data.js?v=2026081609"></script>
-  <script src="app.js?v=2026081609"></script>
+  <script src="shift-data.js?v=2026081610"></script>
+  <script src="app.js?v=2026081610"></script>
 </body>
 </html>
