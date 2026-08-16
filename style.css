@@ -99,6 +99,19 @@ body {
   color: var(--text-muted);
 }
 
+.header-right-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.auth-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .header-actions {
   display: flex;
   gap: 8px;

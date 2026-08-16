@@ -22,15 +22,51 @@
           <p class="subtitle">直營門市輪班 · ☁️ 雲端多人即時同步 · 考勤匯入表一鍵生成</p>
         </div>
       </div>
-      <div class="header-actions">
-        <button id="btnManageEmployees" class="btn btn-secondary btn-touch">👥 人員管理</button>
-        <button id="btnManageShifts" class="btn btn-secondary btn-touch">⏰ 班別字典</button>
-        <button id="btnAiAutoSchedule" class="btn btn-ai btn-touch">✨ AI 一鍵排班</button>
-        <button id="btnExportHr" class="btn btn-primary btn-touch">📥 匯出考勤表</button>
-        <button id="btnExportStore" class="btn btn-outline btn-touch">📊 匯出時數統計</button>
-        <button id="btnResetData" class="btn btn-danger btn-touch" style="font-size:0.78rem;">🔄 重設名單</button>
+      <div class="header-right-box">
+        <!-- 未登入時顯示：登入按鈕 -->
+        <div id="authGuestBox" class="auth-box">
+          <button id="btnOpenLoginModal" class="btn btn-primary btn-touch">🔐 主管登入</button>
+        </div>
+
+        <!-- 登入後才顯示：管理與匯出功能按鈕 + 登出按鈕 -->
+        <div id="authAdminBox" class="header-actions" style="display: none;">
+          <button id="btnManageEmployees" class="btn btn-secondary btn-touch">👥 人員管理</button>
+          <button id="btnManageShifts" class="btn btn-secondary btn-touch">⏰ 班別字典</button>
+          <button id="btnAiAutoSchedule" class="btn btn-ai btn-touch">✨ AI 一鍵排班</button>
+          <button id="btnExportHr" class="btn btn-primary btn-touch">📥 匯出考勤表</button>
+          <button id="btnExportStore" class="btn btn-outline btn-touch">📊 匯出時數統計</button>
+          <button id="btnResetData" class="btn btn-danger btn-touch" style="font-size:0.78rem;">🔄 重設名單</button>
+          <button id="btnLogout" class="btn btn-secondary btn-touch" style="color:var(--danger); border-color:#fca5a5;">🚪 登出 (<span id="loggedUserBadge">DALAB</span>)</button>
+        </div>
       </div>
     </header>
+
+    <!-- 🌟 主管登入對話框 (Modal) -->
+    <div class="modal-overlay" id="loginModalOverlay" style="display:none;">
+      <div class="modal-card" style="max-width: 380px;">
+        <div class="modal-header">
+          <h3>🔐 主管權限登入</h3>
+          <button class="modal-close" id="loginModalCloseBtn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex; flex-direction:column; gap:12px; padding: 6px 0;">
+            <div>
+              <label style="font-size:0.84rem; font-weight:600; color:var(--text-main); display:block; margin-bottom:4px;">帳號：</label>
+              <input type="text" id="loginUsername" class="form-control" style="width:100%;" placeholder="請輸入帳號 (預設 DALAB)">
+            </div>
+            <div>
+              <label style="font-size:0.84rem; font-weight:600; color:var(--text-main); display:block; margin-bottom:4px;">密碼：</label>
+              <input type="password" id="loginPassword" class="form-control" style="width:100%;" placeholder="請輸入密碼 (預設 1234)">
+            </div>
+            <div id="loginErrorMsg" style="color:var(--danger); font-size:0.8rem; display:none;">⚠️ 帳號或密碼錯誤，請重新輸入！</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="loginModalCancelBtn" class="btn btn-outline">取消</button>
+          <button id="loginSubmitBtn" class="btn btn-primary">確認登入</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Controls Bar -->
     <div class="toolbar card">

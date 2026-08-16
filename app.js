@@ -138,6 +138,83 @@
     const leaveModalNote = document.getElementById("leaveModalNote");
     const leaveModalChangeShift = document.getElementById("leaveModalChangeShift");
 
+    // Auth State & Elements
+    const STORAGE_AUTH_KEY = "DEPT_AUTH_USER_V1";
+    let currentUser = localStorage.getItem(STORAGE_AUTH_KEY) || null;
+
+    const authGuestBox = document.getElementById("authGuestBox");
+    const authAdminBox = document.getElementById("authAdminBox");
+    const btnOpenLoginModal = document.getElementById("btnOpenLoginModal");
+    const loginModalOverlay = document.getElementById("loginModalOverlay");
+    const loginModalCloseBtn = document.getElementById("loginModalCloseBtn");
+    const loginModalCancelBtn = document.getElementById("loginModalCancelBtn");
+    const loginSubmitBtn = document.getElementById("loginSubmitBtn");
+    const loginUsername = document.getElementById("loginUsername");
+    const loginPassword = document.getElementById("loginPassword");
+    const loginErrorMsg = document.getElementById("loginErrorMsg");
+    const btnLogout = document.getElementById("btnLogout");
+    const loggedUserBadge = document.getElementById("loggedUserBadge");
+
+    function updateAuthUI() {
+      if (currentUser) {
+        if (authGuestBox) authGuestBox.style.display = "none";
+        if (authAdminBox) authAdminBox.style.display = "flex";
+        if (loggedUserBadge) loggedUserBadge.textContent = currentUser;
+      } else {
+        if (authGuestBox) authGuestBox.style.display = "flex";
+        if (authAdminBox) authAdminBox.style.display = "none";
+      }
+    }
+
+    if (btnOpenLoginModal) {
+      btnOpenLoginModal.addEventListener("click", () => {
+        if (loginUsername) loginUsername.value = "";
+        if (loginPassword) loginPassword.value = "";
+        if (loginErrorMsg) loginErrorMsg.style.display = "none";
+        if (loginModalOverlay) loginModalOverlay.style.display = "flex";
+        setTimeout(() => { if (loginUsername) loginUsername.focus(); }, 100);
+      });
+    }
+
+    function closeLoginModal() {
+      if (loginModalOverlay) loginModalOverlay.style.display = "none";
+    }
+    if (loginModalCloseBtn) loginModalCloseBtn.addEventListener("click", closeLoginModal);
+    if (loginModalCancelBtn) loginModalCancelBtn.addEventListener("click", closeLoginModal);
+
+    function handleLogin() {
+      const u = loginUsername ? loginUsername.value.trim() : "";
+      const p = loginPassword ? loginPassword.value.trim() : "";
+
+      // 預設帳密：DALAB / 1234
+      if (u.toUpperCase() === "DALAB" && p === "1234") {
+        currentUser = "DALAB";
+        localStorage.setItem(STORAGE_AUTH_KEY, currentUser);
+        updateAuthUI();
+        closeLoginModal();
+        alert("🎉 登入成功！已解鎖人員管理、班別字典與考勤匯出等主管功能。");
+      } else {
+        if (loginErrorMsg) loginErrorMsg.style.display = "block";
+      }
+    }
+
+    if (loginSubmitBtn) loginSubmitBtn.addEventListener("click", handleLogin);
+    if (loginPassword) {
+      loginPassword.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") handleLogin();
+      });
+    }
+
+    if (btnLogout) {
+      btnLogout.addEventListener("click", () => {
+        if (confirm("確定要登出主管權限嗎？")) {
+          currentUser = null;
+          localStorage.removeItem(STORAGE_AUTH_KEY);
+          updateAuthUI();
+        }
+      });
+    }
+
     const btnManageEmployees = document.getElementById("btnManageEmployees");
     const empModalOverlay = document.getElementById("empModalOverlay");
     const empModalCloseBtn = document.getElementById("empModalCloseBtn");
@@ -1053,6 +1130,7 @@
     }
 
     // 立即啟動各模組渲染
+    updateAuthUI();
     renderCodeReference();
     initStepper();
     renderScheduleTable();
