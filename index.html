@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>百貨專櫃與直營門市 AI 智慧排班系統</title>
   <link rel="stylesheet" href="style.css">
   <!-- SheetJS CDN for Excel import/export -->
@@ -15,23 +15,23 @@
       <div class="brand">
         <div class="logo-icon">🏢</div>
         <div>
-          <h1>百貨專櫃 AI 智慧排班管理系統</h1>
-          <p class="subtitle">直營門市輪班 · 自訂人員與班別 · 考勤匯入表一鍵生成</p>
+          <h1>百貨專櫃 AI 智慧排班系統</h1>
+          <p class="subtitle">直營門市輪班 · 手機/電腦自適應 · 考勤匯入表一鍵生成</p>
         </div>
       </div>
       <div class="header-actions">
-        <button id="btnManageEmployees" class="btn btn-secondary">👥 人員管理 / 新增</button>
-        <button id="btnManageShifts" class="btn btn-secondary">⏰ 班別管理 / 新增</button>
-        <button id="btnAiAutoSchedule" class="btn btn-ai">✨ AI 一鍵自動排班</button>
-        <button id="btnExportHr" class="btn btn-primary">📥 匯出「考勤匯入表」</button>
-        <button id="btnExportStore" class="btn btn-outline">📊 匯出門市時數統計</button>
+        <button id="btnManageEmployees" class="btn btn-secondary btn-touch">👥 人員管理</button>
+        <button id="btnManageShifts" class="btn btn-secondary btn-touch">⏰ 班別字典</button>
+        <button id="btnAiAutoSchedule" class="btn btn-ai btn-touch">✨ AI 一鍵排班</button>
+        <button id="btnExportHr" class="btn btn-primary btn-touch">📥 匯出考勤表</button>
+        <button id="btnExportStore" class="btn btn-outline btn-touch">📊 匯出時數統計</button>
       </div>
     </header>
 
     <!-- Controls Bar -->
     <div class="toolbar card">
       <div class="toolbar-group">
-        <label for="storeSelect">門市選擇：</label>
+        <label for="storeSelect">門市：</label>
         <select id="storeSelect" class="form-control">
           <option value="DP">DREAM PLAZA (DP)</option>
           <option value="TAINAN">台南三越</option>
@@ -41,7 +41,7 @@
       </div>
 
       <div class="toolbar-group">
-        <label for="yearMonthSelect">排班年月：</label>
+        <label for="yearMonthSelect">年月：</label>
         <select id="yearMonthSelect" class="form-control">
           <optgroup label="2025 年">
             <option value="2025-07">2025 年 7 月</option>
@@ -74,7 +74,7 @@
       </div>
 
       <div class="toolbar-group">
-        <label for="filterRole">職位篩選：</label>
+        <label for="filterRole">篩選：</label>
         <select id="filterRole" class="form-control">
           <option value="ALL">全部人員</option>
           <option value="正職">正職人員</option>
@@ -84,48 +84,47 @@
       </div>
 
       <div class="toolbar-summary" id="toolbarSummary">
-        <span>👥 本店人數：<strong id="statEmpCount">0</strong> 人</span>
-        <span>⏱️ 當月實出工時：<strong id="statTotalHours">0</strong> hr</span>
-        <span>⚖️ 班次衝突/違規：<strong id="statConflicts" class="text-success">0</strong></span>
+        <span>👥 <strong id="statEmpCount">0</strong> 人</span>
+        <span>⏱️ <strong id="statTotalHours">0</strong> hr</span>
+        <span>⚖️ 違規：<strong id="statConflicts" class="text-success">0</strong></span>
       </div>
     </div>
 
-    <!-- 🌟 步驟式選班控制面板 (Step 1 身分 -> Step 2 班表 -> Step 3 點選日期) -->
+    <!-- 🌟 步驟式選班控制面板 (手機直向優化，支援水平滑動與大按鈕) -->
     <div class="stepper-card card">
       <div class="stepper-header">
-        <div class="stepper-title">🎯 班別選取列（點選後直接點下方月曆填入）：</div>
+        <div class="stepper-title">🎯 班別選取列（點選後直接點下方月曆）：</div>
         <div class="active-selection-display" id="activeSelectionDisplay">
-          目前選中：<span class="badge-active-shift" id="badgeActiveShift">請選擇班別</span>
+          選中：<span class="badge-active-shift" id="badgeActiveShift">請選擇班別</span>
         </div>
       </div>
 
       <!-- Step 1: 選擇身分類別 -->
       <div class="step-row">
         <div class="step-label"><strong>步驟 1</strong> 選擇身分：</div>
-        <div class="step-options" id="stepRoleButtons">
-          <button class="btn-step active" data-role="兼職">👤 兼職人員</button>
-          <button class="btn-step" data-role="正職">👔 正職人員</button>
-          <button class="btn-step" data-role="機動">🚗 機動人員</button>
-          <button class="btn-step btn-step-off" data-role="休假">🏖️ 休假 / 例休</button>
-          <button class="btn-step btn-step-clear" data-role="CLEAR">❌ 清除橡皮擦</button>
+        <div class="step-options-scroll" id="stepRoleButtons">
+          <button class="btn-step active" data-role="兼職">👤 兼職</button>
+          <button class="btn-step" data-role="正職">👔 正職</button>
+          <button class="btn-step" data-role="機動">🚗 機動</button>
+          <button class="btn-step btn-step-off" data-role="休假">🏖️ 休假</button>
+          <button class="btn-step btn-step-clear" data-role="CLEAR">❌ 橡皮擦</button>
         </div>
       </div>
 
-      <!-- Step 2: 選擇具體班別 (根據 Step 1 動態展開) -->
+      <!-- Step 2: 選擇具體班別 (水平滾動/觸控滑動卡片) -->
       <div class="step-row">
         <div class="step-label"><strong>步驟 2</strong> 選擇班表：</div>
-        <div class="step-options shift-badges-grid" id="stepShiftButtons">
+        <div class="shift-badges-scroll" id="stepShiftButtons">
           <!-- Rendered dynamically by JS -->
         </div>
       </div>
 
       <div class="step-hint-bar">
-        💡 <strong>操作提示</strong>：
-        點選上方班別後<strong>直接點擊月曆格子</strong>即可填入；<strong>長按已排班的格子（或點擊右鍵）</strong>，即可跳出微調對話框直接修改「請假 30 分鐘」或工時！
+        💡 <strong>手機操作提示</strong>：選好上方班別後，<strong>點擊下方表格格子即可排入</strong>；<strong>長按格子 0.5 秒</strong> 可微調請假（如扣 0.5h）！
       </div>
     </div>
 
-    <!-- Main Schedule Table View -->
+    <!-- Main Schedule Table View (手機雙向凍結：姓名凍結 + 日期表頭凍結) -->
     <div class="table-container card">
       <div class="table-actions">
         <h3 id="currentStoreTitle">DREAM PLAZA (DP) - 2026年 8月 排班表</h3>
@@ -133,8 +132,8 @@
           <span class="legend-item"><span class="color-dot dot-morning"></span> 早班</span>
           <span class="legend-item"><span class="color-dot dot-night"></span> 晚班</span>
           <span class="legend-item"><span class="color-dot dot-all"></span> 全班</span>
-          <span class="legend-item"><span class="color-dot dot-off"></span> 休息/例休 (;H / ;H2)</span>
-          <span class="legend-item"><span class="color-dot dot-leave"></span> 請假/工時異動</span>
+          <span class="legend-item"><span class="color-dot dot-off"></span> 休假</span>
+          <span class="legend-item"><span class="color-dot dot-leave"></span> 請假</span>
         </div>
       </div>
 
@@ -169,7 +168,7 @@
       </div>
     </section>
 
-    <!-- 🌟 長按 / 右鍵 專用：工時微調與請假對話框 (Modal) -->
+    <!-- 🌟 長按 / 點擊 專用：工時微調與請假對話框 (Modal) -->
     <div class="modal-overlay" id="leaveModalOverlay" style="display:none;">
       <div class="modal-card">
         <div class="modal-header">
@@ -205,7 +204,7 @@
             </div>
             
             <div class="quick-leave-buttons">
-              <span class="text-muted" style="font-size:0.8rem;">快捷選項：</span>
+              <span class="text-muted" style="font-size:0.8rem; width:100%;">快捷選項：</span>
               <button class="btn-quick-leave" data-deduct="0.5">請假 30 分鐘 (0.5h)</button>
               <button class="btn-quick-leave" data-deduct="1.0">請假 1 小時 (1.0h)</button>
               <button class="btn-quick-leave" data-deduct="2.0">請假 2 小時 (2.0h)</button>
@@ -214,7 +213,7 @@
 
             <div class="leave-note" style="margin-top:12px;">
               <label>請假事由 / 備註（選填）：</label>
-              <input type="text" id="leaveModalNote" class="form-control" placeholder="例如：請假30分鐘、個人事假、提早半小時離開等">
+              <input type="text" id="leaveModalNote" class="form-control" placeholder="例如：請假30分鐘、個人事假等">
             </div>
           </div>
 
@@ -227,7 +226,7 @@
         </div>
 
         <div class="modal-footer">
-          <button id="leaveModalClearBtn" class="btn btn-secondary">🗑️ 清除此格排班</button>
+          <button id="leaveModalClearBtn" class="btn btn-secondary">🗑️ 清除此格</button>
           <div class="modal-footer-right">
             <button id="leaveModalCancelBtn" class="btn btn-outline">取消</button>
             <button id="leaveModalSaveBtn" class="btn btn-primary">確認儲存</button>
@@ -244,7 +243,6 @@
           <button class="modal-close" id="empModalCloseBtn">✕</button>
         </div>
         <div class="modal-body">
-          <!-- 新增表單 -->
           <div class="card add-form-card">
             <h4>➕ 新增門市員工</h4>
             <div class="form-grid-3">
@@ -279,7 +277,6 @@
             </div>
           </div>
 
-          <!-- 現有人員清單 -->
           <div>
             <h4>📋 目前員工名單 (<span id="totalEmpBadge">0</span> 人)</h4>
             <div class="table-scroll" style="max-height: 250px;">
@@ -312,7 +309,6 @@
           <button class="modal-close" id="shiftManageModalCloseBtn">✕</button>
         </div>
         <div class="modal-body">
-          <!-- 新增班別表單 -->
           <div class="card add-form-card">
             <h4>➕ 自訂新增專櫃班別代碼</h4>
             <div class="form-grid-3">
@@ -356,7 +352,6 @@
             </div>
           </div>
 
-          <!-- 班別清單 -->
           <div>
             <h4>📋 目前班別代碼清單 (<span id="totalShiftBadge">0</span> 組)</h4>
             <div class="table-scroll" style="max-height: 250px;">
@@ -387,10 +382,10 @@
     <footer class="footer">
       <div class="firebase-status">
         <span class="status-indicator online"></span>
-        <span>Firebase 雲端就緒（支援多店線上同步與本機自動暫存）</span>
+        <span>本地端預覽模式（已優化手機觸控與雙向凍結視圖）</span>
       </div>
       <div>
-        <span>百貨零售排班系統 v2.5 · 完整自訂人員與班別代碼字典</span>
+        <span>百貨零售排班系統 v2.6 · 移動端響應式強化</span>
       </div>
     </footer>
   </div>

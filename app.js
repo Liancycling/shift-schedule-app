@@ -1,24 +1,22 @@
-// 排班系統核心邏輯與互動 (v2.5 支援人員與班別自由增刪改查 CRUD)
+// 排班系統核心邏輯與互動 (v2.6 手機端觸控排班與雙向凍結優化)
 document.addEventListener("DOMContentLoaded", () => {
   // State
   let currentStore = "DP";
   let currentYearMonth = "2026-08";
   
   // 🌟 步驟選擇器狀態
-  let selectedRoleCategory = "兼職"; // '兼職', '正職', '機動', '休假', 'CLEAR'
-  let selectedShiftCode = "C13";      // 當前選中的班別
+  let selectedRoleCategory = "兼職";
+  let selectedShiftCode = "C13";
 
   // 本地持久化儲存 Key
   const STORAGE_SCHEDULE_KEY = "DEPT_SCHEDULE_DATA_V2";
   const STORAGE_EMP_KEY = "DEPT_EMP_DATA_V2";
   const STORAGE_SHIFT_KEY = "DEPT_SHIFT_DATA_V2";
 
-  // 載入持久化或預設資料
   let scheduleData = JSON.parse(localStorage.getItem(STORAGE_SCHEDULE_KEY) || "{}");
   let employees = JSON.parse(localStorage.getItem(STORAGE_EMP_KEY) || JSON.stringify(window.INITIAL_EMPLOYEES));
   let customShifts = JSON.parse(localStorage.getItem(STORAGE_SHIFT_KEY) || JSON.stringify(window.SHIFT_DEFINITIONS));
 
-  // 長按與編輯目標
   let currentModalTarget = { store: "", empCode: "", empName: "", day: null, weekday: "" };
 
   // DOM Elements
@@ -34,7 +32,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnAiAutoSchedule = document.getElementById("btnAiAutoSchedule");
   const btnExportHr = document.getElementById("btnExportHr");
   const btnExportStore = document.getElementById("btnExportStore");
-  const excelFileInput = document.getElementById("excelFileInput");
   const toggleCodeRef = document.getElementById("toggleCodeRef");
   const codeRefContent = document.getElementById("codeRefContent");
 
@@ -94,7 +91,6 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(STORAGE_SHIFT_KEY, JSON.stringify(customShifts));
   }
 
-  // 初始化代碼字典表格
   function renderCodeReference() {
     codeRefTbody.innerHTML = "";
     customShifts.forEach(sc => {
@@ -110,7 +106,6 @@ document.addEventListener("DOMContentLoaded", () => {
       codeRefTbody.appendChild(tr);
     });
 
-    // 初始化 Modal 的更換班別下拉選單
     leaveModalChangeShift.innerHTML = '<option value="">-- 維持原班別 --</option>';
     customShifts.forEach(sc => {
       const opt = document.createElement("option");
@@ -145,7 +140,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return days;
   }
 
-  // 🌟 步驟 1 & 2：渲染與切換身分與對應班別清單
   function initStepper() {
     stepRoleButtons.querySelectorAll(".btn-step").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -164,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (selectedRoleCategory === "CLEAR") {
       selectedShiftCode = "CLEAR";
-      stepShiftButtons.innerHTML = '<span class="text-muted" style="padding:8px;">❌ 橡皮擦模式：點選下方任意格子即可清除排班</span>';
+      stepShiftButtons.innerHTML = '<span class="text-muted" style="padding:8px; white-space:nowrap;">❌ 橡皮擦：點選月曆格子清除</span>';
       updateActiveShiftBadge();
       return;
     }
@@ -176,7 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isActive) selectedShiftCode = off.code;
 
         itemBtn.className = `btn-shift-item ${isActive ? "active" : ""}`;
-        itemBtn.innerHTML = `<strong>${off.code} (${off.name})</strong><span class="shift-time">${off.type}</span>`;
+        itemBtn.innerHTML = `<strong>${off.code}</strong><span class="shift-time">${off.name}</span>`;
         itemBtn.addEventListener("click", () => {
           stepShiftButtons.querySelectorAll(".btn-shift-item").forEach(b => b.classList.remove("active"));
           itemBtn.classList.add("active");
@@ -209,8 +203,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       itemBtn.className = `btn-shift-item ${isActive ? "active" : ""}`;
       itemBtn.innerHTML = `
-        <strong>${sc.code} · ${sc.name.split('(')[0]}</strong>
-        <span class="shift-time">${formatTime(sc.start)}~${formatTime(sc.end)} (${sc.hours}h · ${sc.type})</span>
+        <strong>${sc.code} · ${sc.hours}h</strong>
+        <span class="shift-time">${formatTime(sc.start)}~${formatTime(sc.end)}</span>
       `;
 
       itemBtn.addEventListener("click", () => {
@@ -228,21 +222,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateActiveShiftBadge() {
     if (selectedShiftCode === "CLEAR") {
-      badgeActiveShift.innerHTML = `<span style="color:red; font-weight:700;">❌ 橡皮擦 (點選格子清除)</span>`;
+      badgeActiveShift.innerHTML = `<span style="color:red; font-weight:700;">❌ 橡皮擦 (點選清除)</span>`;
       return;
     }
 
     if (selectedShiftCode.startsWith(";H")) {
       const offDef = window.OFF_DEFINITIONS.find(o => o.code === selectedShiftCode);
       const name = offDef ? offDef.name : "休假";
-      badgeActiveShift.innerHTML = `<span style="color:#475569; font-weight:700;">🏖️ ${selectedShiftCode} - ${name}</span>`;
+      badgeActiveShift.innerHTML = `<span style="color:#475569; font-weight:700;">🏖️ ${selectedShiftCode} (${name})</span>`;
       return;
     }
 
     const shiftDef = customShifts.find(s => s.code === selectedShiftCode);
     if (shiftDef) {
       badgeActiveShift.innerHTML = `
-        <span style="color:#1d4ed8; font-weight:700;">【${selectedRoleCategory}】${shiftDef.code} | ${shiftDef.name} (${formatTime(shiftDef.start)}~${formatTime(shiftDef.end)}, ${shiftDef.hours}h)</span>
+        <span style="color:#1d4ed8; font-weight:700;">${shiftDef.code} | ${formatTime(shiftDef.start)}~${formatTime(shiftDef.end)} (${shiftDef.hours}h)</span>
       `;
     }
   }
@@ -255,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
       DREAM: "夢時代",
       SKM: "SKM PARK"
     };
-    currentStoreTitle.textContent = `${storeNames[currentStore]} - ${currentYearMonth} 排班表`;
+    currentStoreTitle.textContent = `${storeNames[currentStore]} - ${currentYearMonth}`;
 
     const days = getDaysInMonth(currentYearMonth);
     const roleFilter = filterRole.value;
@@ -271,15 +265,15 @@ document.addEventListener("DOMContentLoaded", () => {
     let theadHtml = `
       <thead>
         <tr>
-          <th class="emp-col">員工姓名 / 職位</th>
+          <th class="emp-col">姓名/職位</th>
     `;
     days.forEach(d => {
       const weekendCls = d.isWeekend ? "weekend-header" : "";
       theadHtml += `<th class="${weekendCls}">${d.day}<br><small>${d.weekday}</small></th>`;
     });
     theadHtml += `
-          <th class="total-col">實出工時</th>
-          <th class="total-col">休假天</th>
+          <th class="total-col">工時</th>
+          <th class="total-col">休假</th>
         </tr>
       </thead>
     `;
@@ -290,7 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let empOffDays = 0;
       let consecutiveWorkDays = 0;
 
-      let rowHtml = `<tr><td class="emp-col"><strong>${emp.name}</strong> <small class="text-muted">(${emp.code} · ${emp.role})</small></td>`;
+      let rowHtml = `<tr><td class="emp-col"><strong>${emp.name}</strong><br><small class="text-muted">${emp.role}</small></td>`;
 
       days.forEach(d => {
         const key = `${currentStore}_${emp.code}_${d.day}`;
@@ -316,7 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (record && typeof record === 'object' && record.actualHours !== undefined) {
             actH = Number(record.actualHours);
             if (record.leaveHours && Number(record.leaveHours) > 0) {
-              leaveTag = `<span class="cell-leave-tag">請假${record.leaveHours}h</span>`;
+              leaveTag = `<span class="cell-leave-tag">-${record.leaveHours}h</span>`;
             }
           }
 
@@ -409,7 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pressTimer = setTimeout(() => {
           isLongPress = true;
           openLeaveModal(empCode, empName, day, weekday);
-        }, 500);
+        }, 450);
       };
 
       const cancelPress = () => {
@@ -433,13 +427,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const leaveHours = (record && typeof record === 'object') ? (record.leaveHours || 0) : 0;
     const note = (record && typeof record === 'object') ? (record.note || '') : '';
 
-    leaveModalTitle.textContent = `工時微調與請假設定 - ${empName}`;
-    leaveModalSubtitle.textContent = `日期：${currentYearMonth}-${String(day).padStart(2, '0')} (${weekday})`;
+    leaveModalTitle.textContent = `請假與工時微調 - ${empName}`;
+    leaveModalSubtitle.textContent = `${currentYearMonth}-${String(day).padStart(2, '0')} (${weekday})`;
 
     leaveModalCurrentCode.textContent = currentCode || "(未排班)";
     const shiftDef = customShifts.find(s => s.code === currentCode);
     if (shiftDef) {
-      leaveModalCurrentName.textContent = `(${shiftDef.name} · 標準 ${shiftDef.hours}h)`;
+      leaveModalCurrentName.textContent = `(${shiftDef.name} · ${shiftDef.hours}h)`;
       leaveModalStdHours.value = shiftDef.hours;
     } else {
       leaveModalCurrentName.textContent = currentCode.startsWith(";H") ? "(休假/例休)" : "";
@@ -480,7 +474,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const def = customShifts.find(s => s.code === newCode);
       if (def) {
         leaveModalCurrentCode.textContent = def.code;
-        leaveModalCurrentName.textContent = `(${def.name} · 標準 ${def.hours}h)`;
+        leaveModalCurrentName.textContent = `(${def.name} · ${def.hours}h)`;
         leaveModalStdHours.value = def.hours;
         updateLeaveModalActual();
       }
@@ -792,25 +786,6 @@ document.addEventListener("DOMContentLoaded", () => {
     XLSX.utils.book_append_sheet(wb, ws, `${year}年${month}月時數統計表`);
     XLSX.writeFile(wb, `${currentStore}_${year}年${month}月_上下班時數統計表.xlsx`);
   }
-
-  // 📂 讀取 Excel 檔案
-  excelFileInput.addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        alert(`成功讀取 Excel！包含工作表：${workbook.SheetNames.join(", ")}`);
-        runAiAutoSchedule();
-      } catch (err) {
-        alert("讀取 Excel 失敗：" + err.message);
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  });
 
   // Event Listeners
   storeSelect.addEventListener("change", (e) => {
