@@ -227,33 +227,43 @@
           </div>
 
           <div class="modal-section leave-section">
-            <label class="modal-section-title">⏱️ 出勤工時調整：</label>
-            <div class="leave-inputs">
+            <label class="modal-section-title">⏱️ 出勤工時調整（標準 + 加班 - 請假 = 實出）：</label>
+            <div class="leave-inputs" style="grid-template-columns: repeat(4, 1fr);">
               <div class="input-group">
                 <label>標準工時 (h)：</label>
                 <input type="number" id="leaveModalStdHours" class="form-control" readonly value="10.0">
               </div>
               <div class="input-group">
+                <label>加班/早到 (h)：</label>
+                <input type="number" id="leaveModalOvertimeHours" class="form-control" style="background:#f0fdf4; border-color:#86efac; color:#15803d; font-weight:700;" step="0.5" min="0" max="14" value="0" placeholder="如 0.5">
+              </div>
+              <div class="input-group">
                 <label>請假/早退 (h)：</label>
-                <input type="number" id="leaveModalDeductHours" class="form-control actual-highlight" step="0.5" min="0" max="14" value="0.5" placeholder="如 0.5">
+                <input type="number" id="leaveModalDeductHours" class="form-control" style="background:#fef2f2; border-color:#fca5a5; color:#b91c1c; font-weight:700;" step="0.5" min="0" max="14" value="0" placeholder="如 0.5">
               </div>
               <div class="input-group">
                 <label>實出工時 (h)：</label>
-                <input type="number" id="leaveModalActualHours" class="form-control actual-highlight" step="0.5" min="0" value="9.5">
+                <input type="number" id="leaveModalActualHours" class="form-control actual-highlight" step="0.5" min="0" value="10.0">
               </div>
             </div>
             
-            <div class="quick-leave-buttons">
-              <span class="text-muted" style="font-size:0.8rem; width:100%;">快捷選項：</span>
-              <button class="btn-quick-leave" data-deduct="0.5">請假 30 分鐘 (0.5h)</button>
-              <button class="btn-quick-leave" data-deduct="1.0">請假 1 小時 (1.0h)</button>
-              <button class="btn-quick-leave" data-deduct="2.0">請假 2 小時 (2.0h)</button>
+            <div class="quick-leave-buttons" style="margin-top:4px;">
+              <span class="text-muted" style="font-size:0.8rem; width:100%;">💡 加班快捷鍵：</span>
+              <button class="btn-quick-overtime" data-ot="0.5" style="padding:4px 8px; border-radius:6px; border:1px solid #86efac; background:#f0fdf4; color:#15803d; font-size:0.76rem; cursor:pointer;">➕ 加班 30 分鐘 (+0.5h)</button>
+              <button class="btn-quick-overtime" data-ot="1.0" style="padding:4px 8px; border-radius:6px; border:1px solid #86efac; background:#f0fdf4; color:#15803d; font-size:0.76rem; cursor:pointer;">➕ 加班 1 小時 (+1.0h)</button>
+              <button class="btn-quick-overtime" data-ot="0" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border-dark); background:white; font-size:0.76rem; cursor:pointer;">不加班 (0h)</button>
+            </div>
+
+            <div class="quick-leave-buttons" style="margin-top:4px;">
+              <span class="text-muted" style="font-size:0.8rem; width:100%;">💡 請假快捷鍵：</span>
+              <button class="btn-quick-leave" data-deduct="0.5">➖ 請假 30 分鐘 (0.5h)</button>
+              <button class="btn-quick-leave" data-deduct="1.0">➖ 請假 1 小時 (1.0h)</button>
               <button class="btn-quick-leave" data-deduct="0">全勤 (0h)</button>
             </div>
 
-            <div class="leave-note" style="margin-top:12px;">
-              <label>請假事由 / 備註（選填）：</label>
-              <input type="text" id="leaveModalNote" class="form-control" placeholder="例如：請假30分鐘、個人事假等">
+            <div class="leave-note" style="margin-top:8px;">
+              <label>加班 / 請記事由 / 備註（選填）：</label>
+              <input type="text" id="leaveModalNote" class="form-control" placeholder="例如：提早30分上班加班、請假30分鐘等">
             </div>
           </div>
 
@@ -430,7 +440,7 @@
     </footer>
   </div>
 
-  <script src="shift-data.js?v=2026081610"></script>
-  <script src="app.js?v=2026081610"></script>
+  <script src="shift-data.js?v=2026081611"></script>
+  <script src="app.js?v=2026081611"></script>
 </body>
 </html>

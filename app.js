@@ -133,6 +133,7 @@
     const leaveModalCurrentCode = document.getElementById("leaveModalCurrentCode");
     const leaveModalCurrentName = document.getElementById("leaveModalCurrentName");
     const leaveModalStdHours = document.getElementById("leaveModalStdHours");
+    const leaveModalOvertimeHours = document.getElementById("leaveModalOvertimeHours");
     const leaveModalDeductHours = document.getElementById("leaveModalDeductHours");
     const leaveModalActualHours = document.getElementById("leaveModalActualHours");
     const leaveModalNote = document.getElementById("leaveModalNote");
@@ -571,6 +572,7 @@
             let displayCode = shiftCode;
             let hoursSubText = "";
             let leaveTag = "";
+            let otTag = "";
 
             if (shiftCode === ";H" || shiftCode === ";H2" || shiftCode === ";H3" || shiftCode === ";H4") {
               cellClass += " cell-off";
@@ -584,6 +586,9 @@
               
               if (record && typeof record === 'object' && record.actualHours !== undefined) {
                 actH = Number(record.actualHours);
+                if (record.overtimeHours && Number(record.overtimeHours) > 0) {
+                  otTag = `<span class="cell-ot-tag">+${record.overtimeHours}h</span>`;
+                }
                 if (record.leaveHours && Number(record.leaveHours) > 0) {
                   leaveTag = `<span class="cell-leave-tag">-${record.leaveHours}h</span>`;
                 }
@@ -610,6 +615,7 @@
               <div class="cell-content-box">
                 <span class="cell-code">${displayCode}</span>
                 ${hoursSubText ? `<span class="cell-hours">${hoursSubText}</span>` : ''}
+                ${otTag}
                 ${leaveTag}
               </div>
             ` : '';
@@ -709,10 +715,11 @@
       const key = `${currentStore}_${empCode}_${day}`;
       const record = scheduleData[key];
       const currentCode = record ? (typeof record === 'string' ? record : record.code) : selectedShiftCode;
+      const overtimeHours = (record && typeof record === 'object') ? (record.overtimeHours || 0) : 0;
       const leaveHours = (record && typeof record === 'object') ? (record.leaveHours || 0) : 0;
       const note = (record && typeof record === 'object') ? (record.note || '') : '';
 
-      if (leaveModalTitle) leaveModalTitle.textContent = `請假與工時微調 - ${empName}`;
+      if (leaveModalTitle) leaveModalTitle.textContent = `出勤工時微調 - ${empName}`;
       if (leaveModalSubtitle) leaveModalSubtitle.textContent = `${currentYearMonth}-${String(day).padStart(2, '0')} (${weekday})`;
 
       if (leaveModalCurrentCode) leaveModalCurrentCode.textContent = currentCode || "(未排班)";
@@ -725,8 +732,9 @@
         if (leaveModalStdHours) leaveModalStdHours.value = 0;
       }
 
-      if (leaveModalDeductHours) leaveModalDeductHours.value = leaveHours > 0 ? leaveHours : 0.5;
-      if (leaveModalNote) leaveModalNote.value = note || (leaveHours > 0 ? note : "請假30分鐘");
+      if (leaveModalOvertimeHours) leaveModalOvertimeHours.value = overtimeHours > 0 ? overtimeHours : 0;
+      if (leaveModalDeductHours) leaveModalDeductHours.value = leaveHours > 0 ? leaveHours : 0;
+      if (leaveModalNote) leaveModalNote.value = note || "";
       if (leaveModalChangeShift) leaveModalChangeShift.value = "";
 
       updateLeaveModalActual();
@@ -734,23 +742,38 @@
     }
 
     function updateLeaveModalActual() {
-      if (!leaveModalStdHours || !leaveModalDeductHours || !leaveModalActualHours) return;
+      if (!leaveModalStdHours || !leaveModalActualHours) return;
       const std = Number(leaveModalStdHours.value) || 0;
-      const deduct = Number(leaveModalDeductHours.value) || 0;
-      const actual = Math.max(0, std - deduct);
+      const ot = Number(leaveModalOvertimeHours ? leaveModalOvertimeHours.value : 0) || 0;
+      const deduct = Number(leaveModalDeductHours ? leaveModalDeductHours.value : 0) || 0;
+      const actual = Math.max(0, std + ot - deduct);
       leaveModalActualHours.value = actual.toFixed(1);
     }
 
+    if (leaveModalOvertimeHours) leaveModalOvertimeHours.addEventListener("input", updateLeaveModalActual);
     if (leaveModalDeductHours) leaveModalDeductHours.addEventListener("input", updateLeaveModalActual);
 
+    // 加班快捷按鈕
+    document.querySelectorAll(".btn-quick-overtime").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const ot = Number(btn.getAttribute("data-ot"));
+        if (leaveModalOvertimeHours) leaveModalOvertimeHours.value = ot;
+        if (leaveModalNote && ot > 0 && !leaveModalNote.value) {
+          leaveModalNote.value = `加班${ot}小時`;
+        }
+        updateLeaveModalActual();
+      });
+    });
+
+    // 請假快捷按鈕
     document.querySelectorAll(".btn-quick-leave").forEach(btn => {
       btn.addEventListener("click", () => {
         const deduct = Number(btn.getAttribute("data-deduct"));
         if (leaveModalDeductHours) leaveModalDeductHours.value = deduct;
         if (leaveModalNote) {
-          if (deduct === 0.5) leaveModalNote.value = "請假30分鐘";
-          else if (deduct === 1.0) leaveModalNote.value = "請假1小時";
-          else if (deduct === 0) leaveModalNote.value = "";
+          if (deduct === 0.5 && !leaveModalNote.value) leaveModalNote.value = "請假30分鐘";
+          else if (deduct === 1.0 && !leaveModalNote.value) leaveModalNote.value = "請假1小時";
+          else if (deduct === 0 && leaveModalNote.value.includes("請假")) leaveModalNote.value = "";
         }
         updateLeaveModalActual();
       });
@@ -788,6 +811,7 @@
         let code = (leaveModalChangeShift && leaveModalChangeShift.value) || (leaveModalCurrentCode && leaveModalCurrentCode.textContent.trim());
         if (code === "(未排班)") code = selectedShiftCode;
 
+        const ot = Number(leaveModalOvertimeHours ? leaveModalOvertimeHours.value : 0) || 0;
         const deduct = Number(leaveModalDeductHours ? leaveModalDeductHours.value : 0) || 0;
         const actual = Number(leaveModalActualHours ? leaveModalActualHours.value : 0) || 0;
         const note = leaveModalNote ? leaveModalNote.value.trim() : "";
@@ -795,6 +819,7 @@
         scheduleData[key] = {
           code: code,
           actualHours: actual,
+          overtimeHours: ot,
           leaveHours: deduct,
           note: note
         };
@@ -1122,9 +1147,10 @@
           }
 
           let shiftDisplay = code;
-          if (record && record.leaveHours > 0) {
-            shiftDisplay += `(請假${record.leaveHours}h)`;
-          }
+          let notesArr = [];
+          if (record && record.overtimeHours > 0) notesArr.push(`加${record.overtimeHours}h`);
+          if (record && record.leaveHours > 0) notesArr.push(`請${record.leaveHours}h`);
+          if (notesArr.length > 0) shiftDisplay += `(${notesArr.join('/')})`;
 
           shiftRow.push(shiftDisplay);
           hourRow.push(actH > 0 ? actH : "");

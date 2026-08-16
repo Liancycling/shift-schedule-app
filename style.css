@@ -580,6 +580,16 @@ body {
   font-weight: 600;
 }
 
+.cell-ot-tag {
+  font-size: 0.64rem;
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 4px;
+  padding: 0 2px;
+  margin-top: 1px;
+  font-weight: 600;
+}
+
 .cell-morning { background-color: var(--shift-morning-bg); color: var(--shift-morning-text); }
 .cell-night { background-color: var(--shift-night-bg); color: var(--shift-night-text); }
 .cell-all { background-color: var(--shift-all-bg); color: var(--shift-all-text); }
@@ -662,7 +672,7 @@ body {
 
 .leave-inputs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -680,7 +690,7 @@ body {
   box-sizing: border-box !important;
 }
 .input-group label {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -693,10 +703,10 @@ body {
   border-color: #93c5fd;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .leave-inputs {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
 }
 
