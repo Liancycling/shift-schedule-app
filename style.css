@@ -638,17 +638,25 @@ body {
 
 .leave-inputs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  width: 100%;
 }
 .input-group {
-  flex: 1;
+  flex: 1 1 100px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
+.input-group .form-control {
+  width: 100%;
+  box-sizing: border-box;
+}
 .input-group label {
   font-size: 0.76rem;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 .actual-highlight {
   background: #eff6ff;
