@@ -909,6 +909,23 @@
       });
     }
 
+    const btnResetData = document.getElementById("btnResetData");
+    if (btnResetData) {
+      btnResetData.addEventListener("click", () => {
+        if (confirm("確定要重設為預設門市人員與班別名單嗎？這將清除目前的瀏覽器快取設定。")) {
+          localStorage.removeItem(STORAGE_EMP_KEY);
+          localStorage.removeItem(STORAGE_SHIFT_KEY);
+          employees = [...defaultEmployees];
+          customShifts = [...defaultShifts];
+          saveToLocalStorage();
+          renderCodeReference();
+          initStepper();
+          renderScheduleTable();
+          alert("已成功重設名單！");
+        }
+      });
+    }
+
     // 立即啟動各模組渲染
     renderCodeReference();
     initStepper();
