@@ -323,7 +323,7 @@
         db.collection("schedules").doc(currentYearMonth).set({
           shifts: scheduleData,
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true }).catch(err => {
+        }).catch(err => {
           console.warn("Failed syncing schedule to Firestore:", err);
         });
       }
@@ -649,9 +649,12 @@
         const weekday = cell.getAttribute("data-weekday");
         const key = `${currentStore}_${empCode}_${day}`;
 
+        let touchMoved = false;
+
         cell.addEventListener("click", () => {
-          if (isLongPress) {
+          if (isLongPress || touchMoved) {
             isLongPress = false;
+            touchMoved = false;
             return;
           }
 
@@ -678,20 +681,25 @@
 
         const startPress = () => {
           isLongPress = false;
+          touchMoved = false;
           pressTimer = setTimeout(() => {
             isLongPress = true;
             openLeaveModal(empCode, empName, day, weekday);
-          }, 450);
+          }, 500);
         };
 
         const cancelPress = () => {
-          if (pressTimer) clearTimeout(pressTimer);
+          if (pressTimer) {
+            clearTimeout(pressTimer);
+            pressTimer = null;
+          }
         };
 
         cell.addEventListener("mousedown", startPress);
         cell.addEventListener("mouseup", cancelPress);
         cell.addEventListener("mouseleave", cancelPress);
         cell.addEventListener("touchstart", startPress, { passive: true });
+        cell.addEventListener("touchmove", () => { touchMoved = true; cancelPress(); }, { passive: true });
         cell.addEventListener("touchend", cancelPress);
         cell.addEventListener("touchcancel", cancelPress);
       });
