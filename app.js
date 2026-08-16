@@ -1,7 +1,33 @@
-// 排班系統核心邏輯與互動 (v2.7 強健性與即時渲染修復)
+// 百貨專櫃 AI 智慧排班系統 - v3.0 雲端即時多人多端同步版 (Firebase Cloud Firestore)
 (function() {
   function initApp() {
-    console.log("Initializing Department Store Schedule App...");
+    console.log("Initializing Department Store Schedule App with Firebase Cloud Sync...");
+
+    // 1. Firebase 初始化
+    const firebaseConfig = {
+      projectId: "dalab-ae4d7",
+      appId: "1:1030780337201:web:2f96e29cc1714b17002910",
+      storageBucket: "dalab-ae4d7.firebasestorage.app",
+      apiKey: "AIzaSyB3ldt87CpJLI92m_AQUo2eZT4zQznSM54",
+      authDomain: "dalab-ae4d7.firebaseapp.com",
+      messagingSenderId: "1030780337201"
+    };
+
+    let db = null;
+    let isCloudOnline = false;
+
+    try {
+      if (typeof firebase !== 'undefined') {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.firestore();
+        isCloudOnline = true;
+        console.log("Firebase Firestore successfully initialized!");
+      }
+    } catch (e) {
+      console.warn("Firebase initialization failed, falling back to LocalStorage:", e);
+    }
 
     // State
     let currentStore = "DP";
@@ -13,7 +39,7 @@
     const STORAGE_EMP_KEY = "DEPT_EMP_DATA_V2";
     const STORAGE_SHIFT_KEY = "DEPT_SHIFT_DATA_V2";
 
-    // 確保有預設資料庫
+    // 預設資料庫
     const defaultEmployees = (window.INITIAL_EMPLOYEES && window.INITIAL_EMPLOYEES.length > 0) ? window.INITIAL_EMPLOYEES : [
       { code: "SL0003", name: "李靖為", role: "正職", store: "DP" },
       { code: "SL0074", name: "洪孟函", role: "正職", store: "DP" },
@@ -52,6 +78,7 @@
     let employees = [...defaultEmployees];
     let customShifts = [...defaultShifts];
 
+    // LocalStorage Initial fallback
     try {
       const savedSched = localStorage.getItem(STORAGE_SCHEDULE_KEY);
       if (savedSched) scheduleData = JSON.parse(savedSched);
@@ -68,7 +95,7 @@
         if (Array.isArray(parsed) && parsed.length > 0) customShifts = parsed;
       }
     } catch (err) {
-      console.warn("Error reading localStorage:", err);
+      console.warn("LocalStorage parse error:", err);
     }
 
     let currentModalTarget = { store: "", empCode: "", empName: "", day: null, weekday: "" };
@@ -88,6 +115,9 @@
     const btnExportStore = document.getElementById("btnExportStore");
     const toggleCodeRef = document.getElementById("toggleCodeRef");
     const codeRefContent = document.getElementById("codeRefContent");
+    const btnResetData = document.getElementById("btnResetData");
+    const syncStatusText = document.getElementById("syncStatusText");
+    const syncStatusDot = document.getElementById("syncStatusDot");
 
     const stepRoleButtons = document.getElementById("stepRoleButtons");
     const stepShiftButtons = document.getElementById("stepShiftButtons");
@@ -135,13 +165,110 @@
     const shiftManageTbody = document.getElementById("shiftManageTbody");
     const totalShiftBadge = document.getElementById("totalShiftBadge");
 
-    function saveToLocalStorage() {
-      try {
-        localStorage.setItem(STORAGE_SCHEDULE_KEY, JSON.stringify(scheduleData));
-        localStorage.setItem(STORAGE_EMP_KEY, JSON.stringify(employees));
-        localStorage.setItem(STORAGE_SHIFT_KEY, JSON.stringify(customShifts));
-      } catch (e) {
-        console.warn("Failed saving to localStorage", e);
+    // 🌟 雲端即時同步器 (Firestore Real-time Listener)
+    let unsubscribeSchedule = null;
+
+    function setupCloudListeners() {
+      if (!db) return;
+
+      // 監聽排班表即時變更
+      const scheduleDocRef = db.collection("schedules").doc(currentYearMonth);
+      if (unsubscribeSchedule) unsubscribeSchedule();
+
+      unsubscribeSchedule = scheduleDocRef.onSnapshot((doc) => {
+        if (doc.exists) {
+          const cloudData = doc.data();
+          if (cloudData && cloudData.shifts) {
+            scheduleData = cloudData.shifts;
+            localStorage.setItem(STORAGE_SCHEDULE_KEY, JSON.stringify(scheduleData));
+            renderScheduleTable();
+            updateSyncStatus(true);
+          }
+        } else {
+          // 若雲端尚未有此月份資料，同步本地資料上去
+          if (Object.keys(scheduleData).length > 0) {
+            scheduleDocRef.set({ shifts: scheduleData }, { merge: true });
+          }
+        }
+      }, (error) => {
+        console.warn("Firestore schedule snapshot error:", error);
+        updateSyncStatus(false);
+      });
+
+      // 監聽員工名單即時變更
+      db.collection("settings").doc("employees").onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data && Array.isArray(data.list) && data.list.length > 0) {
+            employees = data.list;
+            localStorage.setItem(STORAGE_EMP_KEY, JSON.stringify(employees));
+            renderEmployeeManagementTable();
+            renderScheduleTable();
+          }
+        } else {
+          db.collection("settings").doc("employees").set({ list: employees });
+        }
+      });
+
+      // 監聽班別字典即時變更
+      db.collection("settings").doc("shifts").onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data && Array.isArray(data.list) && data.list.length > 0) {
+            customShifts = data.list;
+            localStorage.setItem(STORAGE_SHIFT_KEY, JSON.stringify(customShifts));
+            renderShiftManagementTable();
+            renderCodeReference();
+            renderShiftOptionsForRole();
+            renderScheduleTable();
+          }
+        } else {
+          db.collection("settings").doc("shifts").set({ list: customShifts });
+        }
+      });
+    }
+
+    function updateSyncStatus(isSynced) {
+      if (!syncStatusText || !syncStatusDot) return;
+      if (isSynced) {
+        syncStatusDot.className = "status-indicator online";
+        syncStatusText.textContent = "☁️ 雲端已即時連線（多店長即時同步中）";
+      } else {
+        syncStatusDot.className = "status-indicator";
+        syncStatusDot.style.background = "#f59e0b";
+        syncStatusText.textContent = "⚠️ 離線暫存模式（已保存於本機）";
+      }
+    }
+
+    function syncScheduleToCloud() {
+      localStorage.setItem(STORAGE_SCHEDULE_KEY, JSON.stringify(scheduleData));
+      if (db) {
+        db.collection("schedules").doc(currentYearMonth).set({
+          shifts: scheduleData,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }).catch(err => {
+          console.warn("Failed syncing schedule to Firestore:", err);
+        });
+      }
+    }
+
+    function syncEmployeesToCloud() {
+      localStorage.setItem(STORAGE_EMP_KEY, JSON.stringify(employees));
+      if (db) {
+        db.collection("settings").doc("employees").set({
+          list: employees,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(err => console.warn("Sync emp error:", err));
+      }
+    }
+
+    function syncShiftsToCloud() {
+      localStorage.setItem(STORAGE_SHIFT_KEY, JSON.stringify(customShifts));
+      if (db) {
+        db.collection("settings").doc("shifts").set({
+          list: customShifts,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(err => console.warn("Sync shift error:", err));
       }
     }
 
@@ -463,7 +590,7 @@
               note: ""
             };
           }
-          saveToLocalStorage();
+          syncScheduleToCloud();
           renderScheduleTable();
         });
 
@@ -589,7 +716,7 @@
           note: note
         };
 
-        saveToLocalStorage();
+        syncScheduleToCloud();
         closeLeaveModal();
         renderScheduleTable();
       });
@@ -599,7 +726,7 @@
       leaveModalClearBtn.addEventListener("click", () => {
         const key = `${currentModalTarget.store}_${currentModalTarget.empCode}_${currentModalTarget.day}`;
         delete scheduleData[key];
-        saveToLocalStorage();
+        syncScheduleToCloud();
         closeLeaveModal();
         renderScheduleTable();
       });
@@ -627,7 +754,7 @@
           const idx = Number(e.target.getAttribute("data-idx"));
           if (confirm(`確定要移除員工 ${employees[idx].name} 嗎？`)) {
             employees.splice(idx, 1);
-            saveToLocalStorage();
+            syncEmployeesToCloud();
             renderEmployeeManagementTable();
             renderScheduleTable();
           }
@@ -657,7 +784,7 @@
         }
 
         employees.push({ code, name, role, store });
-        saveToLocalStorage();
+        syncEmployeesToCloud();
         newEmpCode.value = "";
         newEmpName.value = "";
         renderEmployeeManagementTable();
@@ -690,7 +817,7 @@
           const idx = Number(e.target.getAttribute("data-idx"));
           if (confirm(`確定要刪除班別 ${customShifts[idx].code} 嗎？`)) {
             customShifts.splice(idx, 1);
-            saveToLocalStorage();
+            syncShiftsToCloud();
             renderShiftManagementTable();
             renderCodeReference();
             renderShiftOptionsForRole();
@@ -726,7 +853,7 @@
 
         const group = (start <= 1100 && hours >= 9.5) ? "all" : (start >= 1200 ? "night" : "morning");
         customShifts.push({ code, name, start, end, hours, type, role, group });
-        saveToLocalStorage();
+        syncShiftsToCloud();
 
         newShiftCode.value = "";
         newShiftName.value = "";
@@ -791,9 +918,9 @@
         });
       });
 
-      saveToLocalStorage();
+      syncScheduleToCloud();
       renderScheduleTable();
-      alert("✨ AI 智慧排班完成！已根據正/兼職工時上限、假日人力支援及勞基法七休一原則自動分派！");
+      alert("✨ AI 智慧排班完成！已即時同步上傳至 Firebase 雲端！");
     }
 
     // 匯出考勤表
@@ -887,6 +1014,7 @@
     if (yearMonthSelect) {
       yearMonthSelect.addEventListener("change", (e) => {
         currentYearMonth = e.target.value;
+        setupCloudListeners();
         renderScheduleTable();
       });
     }
@@ -909,19 +1037,17 @@
       });
     }
 
-    const btnResetData = document.getElementById("btnResetData");
     if (btnResetData) {
       btnResetData.addEventListener("click", () => {
-        if (confirm("確定要重設為預設門市人員與班別名單嗎？這將清除目前的瀏覽器快取設定。")) {
-          localStorage.removeItem(STORAGE_EMP_KEY);
-          localStorage.removeItem(STORAGE_SHIFT_KEY);
+        if (confirm("確定要重設名單並同步到雲端嗎？")) {
           employees = [...defaultEmployees];
           customShifts = [...defaultShifts];
-          saveToLocalStorage();
+          syncEmployeesToCloud();
+          syncShiftsToCloud();
           renderCodeReference();
           initStepper();
           renderScheduleTable();
-          alert("已成功重設名單！");
+          alert("已成功重設名單並同步到雲端！");
         }
       });
     }
@@ -930,7 +1056,8 @@
     renderCodeReference();
     initStepper();
     renderScheduleTable();
-    console.log("Department Store Schedule App Ready!");
+    setupCloudListeners();
+    console.log("Department Store Schedule App v3.0 Ready!");
   }
 
   // 雙重保險啟動

@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="style.css">
   <!-- SheetJS CDN for Excel import/export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Firebase App & Firestore SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -16,7 +19,7 @@
         <div class="logo-icon">🏢</div>
         <div>
           <h1>百貨專櫃 AI 智慧排班系統</h1>
-          <p class="subtitle">直營門市輪班 · 手機/電腦自適應 · 考勤匯入表一鍵生成</p>
+          <p class="subtitle">直營門市輪班 · ☁️ 雲端多人即時同步 · 考勤匯入表一鍵生成</p>
         </div>
       </div>
       <div class="header-actions">
@@ -382,16 +385,16 @@
     <!-- Footer -->
     <footer class="footer">
       <div class="firebase-status">
-        <span class="status-indicator online"></span>
-        <span>排班系統運作正常（支援手機觸控與雙向凍結視圖）</span>
+        <span class="status-indicator online" id="syncStatusDot"></span>
+        <span id="syncStatusText">☁️ Firebase 雲端即時同步已連線</span>
       </div>
       <div>
-        <span>百貨零售排班系統 v2.7 · 即時同步強化</span>
+        <span>百貨零售排班系統 v3.0 · 雲端即時多端同步版</span>
       </div>
     </footer>
   </div>
 
-  <script src="shift-data.js?v=2026081601"></script>
-  <script src="app.js?v=2026081601"></script>
+  <script src="shift-data.js?v=2026081602"></script>
+  <script src="app.js?v=2026081602"></script>
 </body>
 </html>
