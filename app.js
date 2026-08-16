@@ -639,9 +639,6 @@
     }
 
     function bindCellEvents() {
-      let pressTimer = null;
-      let isLongPress = false;
-
       document.querySelectorAll(".shift-cell").forEach(cell => {
         const empCode = cell.getAttribute("data-emp");
         const empName = cell.getAttribute("data-name");
@@ -649,15 +646,11 @@
         const weekday = cell.getAttribute("data-weekday");
         const key = `${currentStore}_${empCode}_${day}`;
 
-        let touchMoved = false;
+        let longPressTriggered = false;
+        let pressTimer = null;
 
-        cell.addEventListener("click", () => {
-          if (isLongPress || touchMoved) {
-            isLongPress = false;
-            touchMoved = false;
-            return;
-          }
-
+        // 點擊執行 (清除 或 塗刷班別)
+        const handleCellAction = () => {
           if (selectedShiftCode === "CLEAR") {
             delete scheduleData[key];
           } else {
@@ -672,36 +665,41 @@
           }
           syncScheduleToCloud();
           renderScheduleTable();
-        });
-
-        cell.addEventListener("contextmenu", (e) => {
-          e.preventDefault();
-          openLeaveModal(empCode, empName, day, weekday);
-        });
-
-        const startPress = () => {
-          isLongPress = false;
-          touchMoved = false;
-          pressTimer = setTimeout(() => {
-            isLongPress = true;
-            openLeaveModal(empCode, empName, day, weekday);
-          }, 500);
         };
 
-        const cancelPress = () => {
+        cell.onclick = (e) => {
+          if (longPressTriggered) {
+            longPressTriggered = false;
+            return;
+          }
+          handleCellAction();
+        };
+
+        // 右鍵跳出工時微調
+        cell.oncontextmenu = (e) => {
+          e.preventDefault();
+          openLeaveModal(empCode, empName, day, weekday);
+        };
+
+        // 觸控長按支援
+        cell.addEventListener("touchstart", (e) => {
+          longPressTriggered = false;
+          pressTimer = setTimeout(() => {
+            longPressTriggered = true;
+            openLeaveModal(empCode, empName, day, weekday);
+          }, 600);
+        }, { passive: true });
+
+        const clearTouchTimer = () => {
           if (pressTimer) {
             clearTimeout(pressTimer);
             pressTimer = null;
           }
         };
 
-        cell.addEventListener("mousedown", startPress);
-        cell.addEventListener("mouseup", cancelPress);
-        cell.addEventListener("mouseleave", cancelPress);
-        cell.addEventListener("touchstart", startPress, { passive: true });
-        cell.addEventListener("touchmove", () => { touchMoved = true; cancelPress(); }, { passive: true });
-        cell.addEventListener("touchend", cancelPress);
-        cell.addEventListener("touchcancel", cancelPress);
+        cell.addEventListener("touchend", clearTouchTimer);
+        cell.addEventListener("touchmove", clearTouchTimer);
+        cell.addEventListener("touchcancel", clearTouchTimer);
       });
     }
 

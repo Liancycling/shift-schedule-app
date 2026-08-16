@@ -534,6 +534,7 @@ body {
   justify-content: center;
   align-items: center;
   line-height: 1.1;
+  pointer-events: none;
 }
 
 .cell-code {
