@@ -602,13 +602,6 @@
                 else if (shiftDef.group === "night") cellClass += " cell-night";
                 else if (shiftDef.group === "all") cellClass += " cell-all";
               }
-              consecutiveWorkDays++;
-              if (consecutiveWorkDays > 6) {
-                cellClass += " cell-conflict";
-                conflictCount++;
-              }
-            } else {
-              consecutiveWorkDays = 0;
             }
 
             const cellInner = displayCode ? `
@@ -636,10 +629,6 @@
 
       if (statEmpCount) statEmpCount.textContent = storeEmployees.length;
       if (statTotalHours) statTotalHours.textContent = totalMonthHours.toFixed(1);
-      if (statConflicts) {
-        statConflicts.textContent = conflictCount;
-        statConflicts.className = conflictCount > 0 ? "text-danger" : "text-success";
-      }
 
       bindCellEvents();
     }
@@ -977,7 +966,7 @@
       });
     }
 
-    // 🤖 AI 一鍵智慧排班演算法 (符合專櫃門市 2~3 人上班、正兼職搭配與 10:00-22:00 營業時段覆蓋)
+    // 🤖 AI 一鍵智慧排班演算法 (略過勞基法原則，有填休假者維持休假，其餘全數排班；機動人員完全留空)
     function runAiAutoSchedule() {
       const days = getDaysInMonth(currentYearMonth);
       const storeEmployees = employees.filter(e => e.store === currentStore);
@@ -986,105 +975,65 @@
         return;
       }
 
-      // 分類人員：正職、兼職、機動
-      const fulltimers = storeEmployees.filter(e => e.role === "正職" || e.role === "主管");
-      const parttimers = storeEmployees.filter(e => e.role === "兼職");
-
-      // 追蹤每位同仁連續上班天數與月工時
-      const workStreak = {};
-      const monthlyHours = {};
-      storeEmployees.forEach(e => {
-        workStreak[e.code] = 0;
-        monthlyHours[e.code] = 0;
-      });
-
       days.forEach(d => {
         const isWeekend = d.isWeekend;
-        const targetStaffCount = isWeekend ? 2 : 2; // 每日標準 2 人 (最多 3 人)
 
-        let assignedToday = [];
-
-        // 1. 先挑選正職 (1位正職 + 1位兼職 模式)
-        let availableFulltime = fulltimers.filter(ft => {
-          const key = `${currentStore}_${ft.code}_${d.day}`;
-          if (scheduleData[key]) return false; // 使用者已手動排過
-          if (workStreak[ft.code] >= 6) return false; // 七休一保護
-          return true;
-        });
-
-        // 排序：工時較少與連續上班天數較少者優先排
-        availableFulltime.sort((a, b) => (monthlyHours[a.code] - monthlyHours[b.code]));
-
-        if (availableFulltime.length > 0) {
-          const chosenFt = availableFulltime[0];
-          // 正職早班：10:00-19:00 (C32) 或 10:30-19:30 (C07) 8h
-          const ftShift = isWeekend ? "C32" : "C07";
-          assignedToday.push({ emp: chosenFt, code: ftShift, hours: 8.0 });
-        }
-
-        // 2. 挑選兼職補足至 2 人
-        let availableParttime = parttimers.filter(pt => {
-          const key = `${currentStore}_${pt.code}_${d.day}`;
-          if (scheduleData[key]) return false;
-          if (workStreak[pt.code] >= 6) return false;
-          return true;
-        });
-
-        availableParttime.sort((a, b) => (monthlyHours[a.code] - monthlyHours[b.code]));
-
-        const neededParttimers = targetStaffCount - assignedToday.length;
-        for (let i = 0; i < neededParttimers && i < availableParttime.length; i++) {
-          const chosenPt = availableParttime[i];
-          let ptShift = "";
-          let ptH = 0;
-
-          if (assignedToday.length === 0) {
-            // 沒有正職時，第 1 位兼職負責早班 (10:30-16:30 5.5h)
-            ptShift = isWeekend ? "C18" : "C13";
-            ptH = 5.5;
-          } else {
-            // 搭配晚班，確保涵蓋到晚上 21:30 / 22:00 打烊 (15:30-22:00 6.0h 或 15:30-21:30 5.5h)
-            ptShift = isWeekend ? "C50" : "C12";
-            ptH = 6.0;
-          }
-          assignedToday.push({ emp: chosenPt, code: ptShift, hours: ptH });
-        }
-
-        // 3. 寫入今日排班表，未排到者排休 (機動同仁保持空班待命)
         storeEmployees.forEach(emp => {
-          const key = `${currentStore}_${emp.code}_${d.day}`;
-          if (scheduleData[key]) return; // 保留手動排班
+          // 機動人員全部留空，不執行排班
+          if (emp.role === "機動") {
+            return;
+          }
 
-          const assigned = assignedToday.find(a => a.emp.code === emp.code);
-          if (assigned) {
-            scheduleData[key] = {
-              code: assigned.code,
-              actualHours: assigned.hours,
-              leaveHours: 0,
-              note: ""
-            };
-            workStreak[emp.code]++;
-            monthlyHours[emp.code] += assigned.hours;
-          } else {
-            if (emp.role === "機動") {
-              // 機動人員不預先排班（留白待命，臨時需要時再手動支援）
+          const key = `${currentStore}_${emp.code}_${d.day}`;
+          const currentRecord = scheduleData[key];
+          const currentCode = currentRecord ? (typeof currentRecord === 'string' ? currentRecord : currentRecord.code) : "";
+
+          // 若已經填寫過休假 (;H, ;H2, ;H3, ;H4) 或特定請假，予以保留不覆蓋
+          if (currentCode && (currentCode.startsWith(";H") || (currentRecord && currentRecord.leaveHours > 0))) {
+            return;
+          }
+
+          // 若已經手動指定其他特定班別，亦予以保留
+          if (currentCode) {
+            return;
+          }
+
+          // 其餘空白天數：全數自動排班
+          let assignCode = "";
+          let stdH = 8.0;
+
+          if (emp.role === "正職" || emp.role === "主管") {
+            // 正職：平日 C07 (10:30-19:30 8h) 或 C34 (12:30-21:30 8h) 輪替；假日 C32 (10:00-19:00 8h) 或 C08 (13:00-22:00 8h)
+            if (isWeekend) {
+              assignCode = (d.day % 2 === 0) ? "C32" : "C08";
             } else {
-              const offCode = isWeekend ? ";H2" : ";H";
-              scheduleData[key] = {
-                code: offCode,
-                actualHours: 0,
-                leaveHours: 0,
-                note: ""
-              };
-              workStreak[emp.code] = 0;
+              assignCode = (d.day % 2 === 0) ? "C07" : "C34";
+            }
+            stdH = 8.0;
+          } else {
+            // 兼職：平日 C13 (10:30-16:30 5.5h) 或 C11 (15:30-21:30 5.5h) / C12 (15:30-22:00 6h)；假日 C18 (10:30-16:30 5.5h) 或 C50 (15:30-22:00 6h)
+            if (isWeekend) {
+              assignCode = (d.day % 2 === 0) ? "C18" : "C50";
+              stdH = (d.day % 2 === 0) ? 5.5 : 6.0;
+            } else {
+              assignCode = (d.day % 2 === 0) ? "C13" : "C12";
+              stdH = (d.day % 2 === 0) ? 5.5 : 6.0;
             }
           }
+
+          scheduleData[key] = {
+            code: assignCode,
+            actualHours: stdH,
+            overtimeHours: 0,
+            leaveHours: 0,
+            note: ""
+          };
         });
       });
 
       syncScheduleToCloud();
       renderScheduleTable();
-      alert("✨ AI 智慧排班完成！\n• 每日精準 2 人上班 (正職搭兼職或雙兼職)\n• 營業時間完整涵蓋 10:00 ~ 22:00\n• 機動同仁保持待命不預排\n• 符合勞基法七休一原則！");
+      alert("✨ AI 排班完成！\n• 除已排休假外，其餘天數已全數自動排班\n• 機動人員保持全部留空\n• 已同步上傳至 Firebase 雲端！");
     }
 
     // 匯出考勤表
