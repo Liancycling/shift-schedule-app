@@ -51,27 +51,27 @@ const OFF_DEFINITIONS = [
   { code: ";H4", name: "國定假日", type: "國定" }
 ];
 
-// 初始員工資料（包含 正職、兼職、機動）
+// 初始員工資料（包含 正職、兼職、正職機動、兼職機動）
 const INITIAL_EMPLOYEES = [
   // DREAM PLAZA
-  { code: "SL0003", name: "李靖為", role: "正職", store: "DP" },
+  { code: "SL0003", name: "李靖為", role: "正職機動", store: "DP" },
   { code: "SL0074", name: "洪孟函", role: "正職", store: "DP" },
   { code: "SL0027", name: "賴可欣", role: "兼職", store: "DP" },
-  { code: "SL0067", name: "薄錫毓", role: "兼職", store: "DP" },
+  { code: "SL0067", name: "薄錫毓", role: "兼職機動", store: "DP" },
   { code: "SL0060", name: "黃佩儀", role: "兼職", store: "DP" },
-  { code: "SL0091", name: "支援人員A", role: "機動", store: "DP" },
+  { code: "SL0091", name: "支援人員A", role: "兼職機動", store: "DP" },
   
   // 台南三越
   { code: "SL0037", name: "翁墨璽", role: "兼職", store: "TAINAN" },
   { code: "SL0040", name: "周欣沂", role: "兼職", store: "TAINAN" },
   { code: "SL0078", name: "陳雅琳", role: "兼職", store: "TAINAN" },
-  { code: "SL0092", name: "跨店機動B", role: "機動", store: "TAINAN" },
+  { code: "SL0092", name: "跨店機動B", role: "正職機動", store: "TAINAN" },
   
   // 夢時代
   { code: "SL0062", name: "陳佳樺", role: "正職", store: "DREAM" },
   { code: "SL0066", name: "陳嵩岳", role: "兼職", store: "DREAM" },
   { code: "SL0063", name: "張怡婷", role: "兼職", store: "DREAM" },
-  { code: "SL0093", name: "機動支援C", role: "機動", store: "DREAM" },
+  { code: "SL0093", name: "機動支援C", role: "兼職機動", store: "DREAM" },
   
   // SKM PARK
   { code: "SL0073", name: "吳芸慈", role: "正職", store: "SKM" },
@@ -79,7 +79,7 @@ const INITIAL_EMPLOYEES = [
   { code: "SL0071", name: "蘇啟", role: "兼職", store: "SKM" },
   { code: "SL0076", name: "吳奕姍", role: "兼職", store: "SKM" },
   { code: "SL0077", name: "沈泓岳", role: "兼職", store: "SKM" },
-  { code: "SL0094", name: "高雄機動D", role: "機動", store: "SKM" }
+  { code: "SL0094", name: "高雄機動D", role: "兼職機動", store: "SKM" }
 ];
 
 window.SHIFT_DEFINITIONS = SHIFT_DEFINITIONS;

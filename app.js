@@ -41,23 +41,26 @@
 
     // 預設資料庫
     const defaultEmployees = (window.INITIAL_EMPLOYEES && window.INITIAL_EMPLOYEES.length > 0) ? window.INITIAL_EMPLOYEES : [
-      { code: "SL0003", name: "李靖為", role: "正職", store: "DP" },
+      { code: "SL0003", name: "李靖為", role: "正職機動", store: "DP" },
       { code: "SL0074", name: "洪孟函", role: "正職", store: "DP" },
       { code: "SL0027", name: "賴可欣", role: "兼職", store: "DP" },
-      { code: "SL0067", name: "薄錫毓", role: "兼職", store: "DP" },
+      { code: "SL0067", name: "薄錫毓", role: "兼職機動", store: "DP" },
       { code: "SL0060", name: "黃佩儀", role: "兼職", store: "DP" },
-      { code: "SL0091", name: "支援人員A", role: "機動", store: "DP" },
+      { code: "SL0091", name: "支援人員A", role: "兼職機動", store: "DP" },
       { code: "SL0037", name: "翁墨璽", role: "兼職", store: "TAINAN" },
       { code: "SL0040", name: "周欣沂", role: "兼職", store: "TAINAN" },
       { code: "SL0078", name: "陳雅琳", role: "兼職", store: "TAINAN" },
+      { code: "SL0092", name: "跨店機動B", role: "正職機動", store: "TAINAN" },
       { code: "SL0062", name: "陳佳樺", role: "正職", store: "DREAM" },
       { code: "SL0066", name: "陳嵩岳", role: "兼職", store: "DREAM" },
       { code: "SL0063", name: "張怡婷", role: "兼職", store: "DREAM" },
+      { code: "SL0093", name: "機動支援C", role: "兼職機動", store: "DREAM" },
       { code: "SL0073", name: "吳芸慈", role: "正職", store: "SKM" },
       { code: "SL0070", name: "盧詠沂", role: "兼職", store: "SKM" },
       { code: "SL0071", name: "蘇啟", role: "兼職", store: "SKM" },
       { code: "SL0076", name: "吳奕姍", role: "兼職", store: "SKM" },
-      { code: "SL0077", name: "沈泓岳", role: "兼職", store: "SKM" }
+      { code: "SL0077", name: "沈泓岳", role: "兼職", store: "SKM" },
+      { code: "SL0094", name: "高雄機動D", role: "兼職機動", store: "SKM" }
     ];
 
     const defaultShifts = (window.SHIFT_DEFINITIONS && window.SHIFT_DEFINITIONS.length > 0) ? window.SHIFT_DEFINITIONS : [
@@ -78,7 +81,7 @@
     let employees = [...defaultEmployees];
     let customShifts = [...defaultShifts];
 
-    // LocalStorage Initial fallback
+    // LocalStorage Initial fallback & auto-migrate roles
     try {
       const savedSched = localStorage.getItem(STORAGE_SCHEDULE_KEY);
       if (savedSched) scheduleData = JSON.parse(savedSched);
@@ -86,7 +89,13 @@
       const savedEmp = localStorage.getItem(STORAGE_EMP_KEY);
       if (savedEmp) {
         const parsed = JSON.parse(savedEmp);
-        if (Array.isArray(parsed) && parsed.length > 0) employees = parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          employees = parsed.map(emp => {
+            if (emp.name === "李靖為" || emp.code === "SL0003") return { ...emp, role: "正職機動" };
+            if (emp.name === "薄錫毓" || emp.code === "SL0067") return { ...emp, role: "兼職機動" };
+            return emp;
+          });
+        }
       }
 
       const savedShift = localStorage.getItem(STORAGE_SHIFT_KEY);
@@ -528,8 +537,9 @@
       const roleFilter = filterRole ? filterRole.value : "ALL";
       const storeEmployees = employees.filter(e => {
         if (e.store !== currentStore) return false;
-        if (roleFilter !== "ALL" && e.role !== roleFilter) return false;
-        return true;
+        if (roleFilter === "ALL") return true;
+        if (roleFilter === "機動") return e.role.includes("機動");
+        return e.role === roleFilter;
       });
 
       let totalMonthHours = 0;
@@ -1000,8 +1010,9 @@
         return;
       }
 
-      const fulltimers = storeEmployees.filter(e => e.role === "正職" || e.role === "主管");
-      const parttimers = storeEmployees.filter(e => e.role === "兼職");
+      // 僅篩選純『正職』與純『兼職』進行例行排班，所有機動人員（正職機動、兼職機動）保持留空
+      const fulltimers = storeEmployees.filter(e => (e.role === "正職" || e.role === "主管") && !e.role.includes("機動"));
+      const parttimers = storeEmployees.filter(e => e.role === "兼職" && !e.role.includes("機動"));
 
       // 步驟 1: 預先檢查國定假日並將所有職員 (或已填 ;H 者) 轉換為 ;H4
       days.forEach(d => {
@@ -1009,7 +1020,7 @@
         const isNationalHoliday = !!TAIWAN_NATIONAL_HOLIDAYS[dateStr];
 
         storeEmployees.forEach(emp => {
-          if (emp.role === "機動") return;
+          if (emp.role.includes("機動")) return; // 所有機動人員不自動預排
           const key = `${currentStore}_${emp.code}_${d.day}`;
           const currentRecord = scheduleData[key];
           const currentCode = currentRecord ? (typeof currentRecord === 'string' ? currentRecord : currentRecord.code) : "";
@@ -1048,7 +1059,7 @@
         let notAvailable = new Set(); // 當天排休假、國假、請假或強制七休一的人員不可選為上班
 
         storeEmployees.forEach(emp => {
-          if (emp.role === "機動") return;
+          if (emp.role.includes("機動")) return;
           const key = `${currentStore}_${emp.code}_${d.day}`;
           const currentRecord = scheduleData[key];
           const currentCode = currentRecord ? (typeof currentRecord === 'string' ? currentRecord : currentRecord.code) : "";
@@ -1111,7 +1122,7 @@
 
         // (C) 寫入排班與自動指派 H / H2 休假
         storeEmployees.forEach(emp => {
-          if (emp.role === "機動") return;
+          if (emp.role.includes("機動")) return; // 所有機動同仁完全留空
 
           const key = `${currentStore}_${emp.code}_${d.day}`;
           const currentRecord = scheduleData[key];
