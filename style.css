@@ -594,6 +594,7 @@ body {
 .cell-night { background-color: var(--shift-night-bg); color: var(--shift-night-text); }
 .cell-all { background-color: var(--shift-all-bg); color: var(--shift-all-text); }
 .cell-off { background-color: var(--shift-off-bg); color: var(--shift-off-text); }
+.cell-holiday { background-color: #fef3c7 !important; color: #b45309 !important; font-weight: 700; }
 .cell-conflict { background-color: #fee2e2 !important; color: #b91c1c !important; font-weight: 700; }
 
 /* 🌟 Modals (手機滿版彈窗優化) */

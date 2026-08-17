@@ -576,7 +576,10 @@
 
             if (shiftCode === ";H" || shiftCode === ";H2" || shiftCode === ";H3" || shiftCode === ";H4") {
               cellClass += " cell-off";
-              displayCode = shiftCode === ";H2" ? "例休" : (shiftCode === ";H" ? "休" : shiftCode);
+              if (shiftCode === ";H2") displayCode = "例休";
+              else if (shiftCode === ";H4") displayCode = "國休";
+              else if (shiftCode === ";H") displayCode = "休";
+              else displayCode = shiftCode;
               empOffDays++;
               consecutiveWorkDays = 0;
             } else if (shiftCode) {
@@ -966,7 +969,29 @@
       });
     }
 
-    // 🤖 AI 一鍵智慧排班演算法 (保留已填休假；嚴格維持每天 2 人上班：1正+1兼 或 2兼；早晚班重疊交接；其餘排休；機動完全留空)
+    // 國定假日資料庫 (包含 2025、2026、2027 年常見國定假日)
+    const TAIWAN_NATIONAL_HOLIDAYS = {
+      // 2025
+      "2025-01-01": "元旦", "2025-01-27": "除夕前", "2025-01-28": "除夕", "2025-01-29": "春節", "2025-01-30": "春節", "2025-01-31": "春節",
+      "2025-02-28": "和平紀念日", "2025-04-03": "兒童節補假", "2025-04-04": "清明節", "2025-05-01": "勞動節", "2025-05-31": "端午節",
+      "2025-10-06": "中秋節", "2025-10-10": "國慶日",
+      // 2026 (115年)
+      "2026-01-01": "元旦", "2026-02-15": "除夕前", "2026-02-16": "除夕", "2026-02-17": "春節", "2026-02-18": "春節", "2026-02-19": "春節",
+      "2026-02-28": "和平紀念日", "2026-04-04": "兒童節/清明節", "2026-04-05": "清明節補假", "2026-05-01": "勞動節", "2026-06-19": "端午節",
+      "2026-09-25": "中秋節", "2026-10-10": "國慶日",
+      // 2027
+      "2027-01-01": "元旦", "2027-02-05": "除夕前", "2027-02-06": "除夕", "2027-02-07": "春節", "2027-02-08": "春節", "2027-02-09": "春節",
+      "2027-02-28": "和平紀念日", "2027-04-04": "兒童節", "2027-04-05": "清明節", "2027-05-01": "勞動節", "2027-06-09": "端午節",
+      "2027-09-15": "中秋節", "2027-10-10": "國慶日"
+    };
+
+    // 🤖 AI 一鍵智慧排班演算法
+    // 規則：
+    // 1. 遇國定假日：若當天是國定假日，自動給職員 ;H4 (國定假日)；若同仁已填 ;H 亦自動轉換為 ;H4
+    // 2. 7天內至少給1個 ;H (休息日)
+    // 3. ;H2 (例假日) 由 AI 自動排上 (主要分派在週末或每週例休)
+    // 4. 同仁自填休假不足時，AI 自動補足排班，並維持每日精準 2 人上班 (正兼搭或雙兼)，早晚班重疊交接
+    // 5. 機動同仁全部留空待命
     function runAiAutoSchedule() {
       const days = getDaysInMonth(currentYearMonth);
       const storeEmployees = employees.filter(e => e.store === currentStore);
@@ -975,23 +1000,52 @@
         return;
       }
 
-      // 分類人員：正職、兼職、機動
       const fulltimers = storeEmployees.filter(e => e.role === "正職" || e.role === "主管");
       const parttimers = storeEmployees.filter(e => e.role === "兼職");
 
-      // 追蹤每位同仁連續上班天數與月工時（用以平均分派）
+      // 步驟 1: 預先檢查國定假日並將所有職員 (或已填 ;H 者) 轉換為 ;H4
+      days.forEach(d => {
+        const dateStr = `${currentYearMonth}-${String(d.day).padStart(2, '0')}`;
+        const isNationalHoliday = !!TAIWAN_NATIONAL_HOLIDAYS[dateStr];
+
+        storeEmployees.forEach(emp => {
+          if (emp.role === "機動") return;
+          const key = `${currentStore}_${emp.code}_${d.day}`;
+          const currentRecord = scheduleData[key];
+          const currentCode = currentRecord ? (typeof currentRecord === 'string' ? currentRecord : currentRecord.code) : "";
+
+          // 若當天為國定假日，或同仁已填 ;H 且當天為國定假日，自動設定/轉換為 ;H4
+          if (isNationalHoliday) {
+            if (!currentCode || currentCode === ";H" || currentCode === ";H2" || currentCode === ";H3") {
+              scheduleData[key] = {
+                code: ";H4",
+                actualHours: 0,
+                overtimeHours: 0,
+                leaveHours: 0,
+                note: TAIWAN_NATIONAL_HOLIDAYS[dateStr] || "國定假日"
+              };
+            }
+          }
+        });
+      });
+
+      // 追蹤每位同仁自上次休假以來的連續工作天數與月工時
+      const daysSinceLastOff = {};
       const monthlyHours = {};
       storeEmployees.forEach(e => {
+        daysSinceLastOff[e.code] = 0;
         monthlyHours[e.code] = 0;
       });
 
+      // 步驟 2: 逐日執行智慧排班
       days.forEach(d => {
         const isWeekend = d.isWeekend;
         const targetStaffCount = 2; // 每日精準 2 人上班
+        const dateStr = `${currentYearMonth}-${String(d.day).padStart(2, '0')}`;
+        const isNationalHoliday = !!TAIWAN_NATIONAL_HOLIDAYS[dateStr];
 
-        // 1. 檢查當天是否已經有人手動排了「上班」或「休假」
         let alreadyWorking = [];
-        let notAvailable = new Set(); // 當天排休假或請假者不可選為上班
+        let notAvailable = new Set(); // 當天排休假、國假、請假或強制七休一的人員不可選為上班
 
         storeEmployees.forEach(emp => {
           if (emp.role === "機動") return;
@@ -1001,30 +1055,37 @@
 
           if (currentCode) {
             if (currentCode.startsWith(";H") || (currentRecord && currentRecord.leaveHours > 0 && currentRecord.actualHours === 0)) {
-              notAvailable.add(emp.code); // 已排休假
+              notAvailable.add(emp.code); // 已排休假/國假
+              daysSinceLastOff[emp.code] = 0; // 重置連續工作計數
             } else {
               alreadyWorking.push(emp.code); // 已手動排上班
+              notAvailable.add(emp.code);
+              daysSinceLastOff[emp.code]++;
+            }
+          } else {
+            // 七天內需要給一個 H：若已連上 6 天，第 7 天必須強迫排休 (;H)
+            if (daysSinceLastOff[emp.code] >= 6) {
               notAvailable.add(emp.code);
             }
           }
         });
 
-        // 2. 依搭配原則挑選今日上班人員（目標 2 人）
-        let assignedToday = []; // { emp, code, hours }
+        // 挑選今日上班人員 (目標補足至 2 人)
+        let assignedToday = [];
 
-        // (A) 先看正職：若有可用正職且上班人數尚未達標，選 1 位正職
+        // (A) 優先選 1 位正職 (早班)
         const availableFt = fulltimers.filter(ft => !notAvailable.has(ft.code));
         availableFt.sort((a, b) => (monthlyHours[a.code] - monthlyHours[b.code]));
 
         if (alreadyWorking.length === 0 && availableFt.length > 0) {
           const chosenFt = availableFt[0];
-          // 正職：平日 C07 (10:30-19:30 8h) 或 假日 C32 (10:00-19:00 8h) 早班 (與晚班重疊 15:30~19:30 交接)
+          // 正職：平日 C07 (10:30-19:30 8h) 或 假日 C32 (10:00-19:00 8h)
           const ftShift = isWeekend ? "C32" : "C07";
           assignedToday.push({ emp: chosenFt, code: ftShift, hours: 8.0, isMorning: true });
           notAvailable.add(chosenFt.code);
         }
 
-        // (B) 挑選兼職補足至 2 人
+        // (B) 挑選兼職補足至 2 人 (晚班收尾，15:30~19:30 重疊交接)
         const availablePt = parttimers.filter(pt => !notAvailable.has(pt.code));
         availablePt.sort((a, b) => (monthlyHours[a.code] - monthlyHours[b.code]));
 
@@ -1048,18 +1109,15 @@
           notAvailable.add(chosenPt.code);
         }
 
-        // 3. 寫入排班表：
-        // • 被選中的同仁 ➔ 填入班別
-        // • 其餘未排到班的正兼職同仁 ➔ 填入休假 (;H / ;H2)
-        // • 機動同仁 ➔ 保持留白待命
+        // (C) 寫入排班與自動指派 H / H2 休假
         storeEmployees.forEach(emp => {
-          if (emp.role === "機動") return; // 機動全部留空
+          if (emp.role === "機動") return;
 
           const key = `${currentStore}_${emp.code}_${d.day}`;
           const currentRecord = scheduleData[key];
           const currentCode = currentRecord ? (typeof currentRecord === 'string' ? currentRecord : currentRecord.code) : "";
 
-          // 保留手動排好的班別或休假
+          // 若已經有班表 (包含國假 ;H4、自填休假等)，予以保留
           if (currentCode) return;
 
           const assigned = assignedToday.find(a => a.emp.code === emp.code);
@@ -1072,8 +1130,9 @@
               note: ""
             };
             monthlyHours[emp.code] += assigned.hours;
+            daysSinceLastOff[emp.code]++;
           } else {
-            // 今日未排到班 ➔ 自動排休
+            // 今日未排到上班 ➔ AI 自動排休 (週末排 ;H2 例休，平日排 ;H 休息日)
             const offCode = isWeekend ? ";H2" : ";H";
             scheduleData[key] = {
               code: offCode,
@@ -1082,13 +1141,14 @@
               leaveHours: 0,
               note: ""
             };
+            daysSinceLastOff[emp.code] = 0;
           }
         });
       });
 
       syncScheduleToCloud();
       renderScheduleTable();
-      alert("✨ AI 智慧排班完成！\n• 嚴格維持每日精準 2 人上班 (1正+1兼 或 2兼)\n• 早晚班於 15:30~19:30 重疊交接換班\n• 保留已填休假，未排班日自動輪休\n• 機動同仁保持全部留空！");
+      alert("✨ AI 智慧排班完成！\n• 遇國定假日自動指派 / 轉換為【;H4 國定假日】\n• 7天內必定保證安排【;H 休息日】\n• 週末由 AI 自動分派【;H2 例假日】\n• 同仁休假不足時由 AI 自動補足排班\n• 每日精準 2 人上班 (正兼搭/雙兼)，15:30~19:30 重疊交接\n• 機動人員保持全部留空待命！");
     }
 
     // 匯出考勤表
